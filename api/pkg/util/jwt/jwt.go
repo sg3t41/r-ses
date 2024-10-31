@@ -10,28 +10,23 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
-	// Password string `json:"password"`
-	Email    string `json:"email"`
-	Username string `json:"username"`
+	UserID    string `json:"user_id"`
+	Username  string `json:"username"`
+	AvatarURL string `json:"avatar_url"`
 	jwt.StandardClaims
 }
 
 // GenerateToken generate tokens used for auth
-func GenerateToken(username, userID, email string) (string, error) {
+func GenerateToken(userID, username, avatarURL string) (string, error) {
 	nowTime := time.Now()
 	// fix
 	expireTime := nowTime.Add(9999 * time.Hour)
 
 	claims := Claims{
 		// fixme パラメータの選定
-		UserID:   userID,
-		Username: username,
-		Email:    email,
-		// md5.Encode(username),
-		// md5.Encode(userID),
-		// md5.Encode(email),
-
+		UserID:    userID,
+		Username:  username,
+		AvatarURL: avatarURL,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expireTime.Unix(),
 			Issuer:    "fixme",

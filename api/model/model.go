@@ -14,7 +14,7 @@ var DB *sql.DB
 
 // Model : DBレコードに共通するフィールド
 type Model struct {
-	ID        int          `json:"id"`
+	ID        string       `json:"id"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`
 	DeletedAt sql.NullTime `json:"deleted_at"`
@@ -53,26 +53,23 @@ func CloseDB() {
 }
 
 // CreateRecord : 新しいレコードを作成する関数
-func CreateRecord(query string, args ...interface{}) (int64, error) {
-	var lastInsertId int64
-	nowTime := time.Now()
-	args = append(args, nowTime, nowTime)
+func CreateRecord(query string, args ...interface{}) (string, error) {
+	var lastInsertId string
 	err := DB.QueryRow(query+" RETURNING id", args...).Scan(&lastInsertId)
 	if err != nil {
-		return 0, err
+		return "", fmt.Errorf("InsertRecord error: %v", err)
 	}
 	return lastInsertId, nil
 }
 
 // UpdateRecord : レコードを更新する関数
-func UpdateRecord(query string, args ...interface{}) (int64, error) {
-	nowTime := time.Now()
-	args = append(args, nowTime)
-	result, err := DB.Exec(query, args...)
+func UpdateRecord(query string, args ...interface{}) (string, error) {
+	var updatedId string
+	err := DB.QueryRow(query+" RETURNING id", args...).Scan(&updatedId)
 	if err != nil {
-		return 0, err
+		return "", fmt.Errorf("UpdateRecord error: %v", err)
 	}
-	return result.RowsAffected()
+	return updatedId, nil
 }
 
 // SoftDeleteRecord : レコードをソフトデリートする関数

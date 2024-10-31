@@ -7,9 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sg3t41/api/pkg/redis"
 	"github.com/sg3t41/api/router/api/auth/github/callback"
-	login "github.com/sg3t41/api/router/api/auth/github/login"
-	"github.com/sg3t41/api/router/api/v1/posts"
-	"github.com/sg3t41/api/router/api/v1/users"
+	"github.com/sg3t41/api/router/api/auth/github/login"
 )
 
 // InitRouter initialize routing information
@@ -39,15 +37,7 @@ func InitRouter() *gin.Engine {
 	r.GET("/api/auth/github/login", login.Get)
 	r.GET("/api/auth/github/callback", callback.Get)
 
-	apiv1 := r.Group("/api/v1")
-	// apiv1.Use(middleware.JWT())
-	{
-		apiv1.GET("/posts", posts.Get)
-		apiv1.POST("/posts", posts.Post)
-
-		apiv1.GET("/users", users.Get)
-		apiv1.POST("/users", users.Post)
-	}
+	//	apiv1 := r.Group("/api/v1")
 
 	return r
 }

@@ -1,12 +1,18 @@
 package callback
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sg3t41/api/config"
+	"github.com/sg3t41/api/model"
+	"github.com/sg3t41/api/pkg/redis"
+	"github.com/sg3t41/api/pkg/util/jwt"
 )
 
 func Get(c *gin.Context) {
@@ -19,7 +25,7 @@ func Get(c *gin.Context) {
 	// アクセストークンを取得
 	token, err := getAccessToken(code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error_accesstoken": err.Error()})
 		return
 	}
 
@@ -27,9 +33,121 @@ func Get(c *gin.Context) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(user)
 
-	c.Redirect(http.StatusFound, "http://localhost:3000?token="+token)
+	/************************************
+	* Store github user data to Postgres
+	*************************************/
+	userExists, err := model.GetRecords("users", "github_id = $1", user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var userID string
+	if len(userExists) > 0 {
+		// ユーザーが存在する場合、更新する
+		q := `UPDATE users SET username=$1, email=$2, avatar_url=$3, profile_url=$4, full_name=$5 WHERE github_id=$6`
+		updatedUserID, err := model.UpdateRecord(q, user.Login, user.Email, user.AvatarURL, user.URL, user.Name, user.ID)
+		if err != nil {
+			fmt.Println(q)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		userID = updatedUserID
+	} else {
+		// ユーザーが存在しない場合、新規作成
+		q := `INSERT INTO users (github_id, username, email, avatar_url, profile_url, full_name) VALUES ($1, $2, $3, $4, $5, $6)`
+		insertedUserID, err := model.CreateRecord(q, user.ID, user.Login, user.Email, user.AvatarURL,
+			user.URL, user.Name)
+		if err != nil {
+			fmt.Println(q)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		userID = insertedUserID
+	}
+
+	/***************
+	 * Create JWT
+	 ***************/
+	jwtToken, err := jwt.GenerateToken(userID, user.Login, user.AvatarURL)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	/***************************
+	* Store token to Postgres
+	****************************/
+	//Generate a 32-byte random string for the refresh token.
+	bytes := make([]byte, 32)
+	_, err = rand.Read(bytes)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	refreshToken := base64.URLEncoding.EncodeToString(bytes)
+
+	q := `INSERT INTO user_tokens (user_id, access_token, refresh_token, expires_at, refresh_expires_at, is_revoked) VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err = model.CreateRecord(q, userID, jwtToken, refreshToken, time.Now().Add(1*time.Hour), time.Now().Add(7*24*time.Hour), true)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	/************************************************
+	 * Store session data and access token to Redis
+	 ************************************************/
+	oneDay := time.Hour * 24
+
+	// TODO: impl async
+	{
+		/* Store tokens */
+		e := oneDay * 3
+		k := fmt.Sprintf("user_token:%s", userID)
+		v := map[string]interface{}{
+			"access_token":  jwtToken,
+			"refresh_token": refreshToken,
+		}
+
+		if err := redis.HSet(c, k, v); err != nil {
+			fmt.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+
+		if err := redis.Expire(c, k, e); err != nil {
+			fmt.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+	}
+
+	{
+		/* Store user info */
+		k := fmt.Sprintf("user_info:%s", userID)
+		v := map[string]interface{}{
+			"github_id":   user.ID,
+			"profile_url": user.URL,
+			"github_name": user.Login,
+			"email":       user.Email,
+			"avatar_url":  user.AvatarURL,
+			"full_name":   user.Name,
+		}
+
+		if err := redis.HSet(c, k, v); err != nil {
+			fmt.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+	}
+
+	c.Redirect(http.StatusFound, "http://localhost:3000?token="+jwtToken)
 }
 
 func getAccessToken(code string) (string, error) {

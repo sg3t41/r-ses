@@ -1,6 +1,8 @@
 package redis
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/sg3t41/api/config"
@@ -14,6 +16,15 @@ func SetUp() {
 		Password: config.RedisSetting.Password,
 		DB:       0,
 	})
+}
+
+// 有効期限
+func Expire(c *gin.Context, key string, expiration time.Duration) error {
+	err := rdb.Expire(c, key, expiration).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Setは文字列を保存します
