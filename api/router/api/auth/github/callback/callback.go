@@ -1,8 +1,6 @@
 package callback
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +10,7 @@ import (
 	"github.com/sg3t41/api/config"
 	"github.com/sg3t41/api/model"
 	"github.com/sg3t41/api/pkg/redis"
+	"github.com/sg3t41/api/pkg/util"
 	"github.com/sg3t41/api/pkg/util/jwt"
 )
 
@@ -46,7 +45,17 @@ func Get(c *gin.Context) {
 	var userID string
 	if len(userExists) > 0 {
 		// ユーザーが存在する場合、更新する
-		q := `UPDATE users SET username=$1, email=$2, avatar_url=$3, profile_url=$4, full_name=$5 WHERE github_id=$6`
+		q := `
+		UPDATE users 
+		SET
+			username=$1,
+			email=$2, 
+			avatar_url=$3, 
+			profile_url=$4, 
+			full_name=$5 
+		WHERE 
+			github_id=$6
+		`
 		updatedUserID, err := model.UpdateRecord(q, user.Login, user.Email, user.AvatarURL, user.URL, user.Name, user.ID)
 		if err != nil {
 			fmt.Println(q)
@@ -57,7 +66,15 @@ func Get(c *gin.Context) {
 		userID = updatedUserID
 	} else {
 		// ユーザーが存在しない場合、新規作成
-		q := `INSERT INTO users (github_id, username, email, avatar_url, profile_url, full_name) VALUES ($1, $2, $3, $4, $5, $6)`
+		q := `
+		INSERT INTO users (
+			github_id, 
+			username, 
+			email, 
+			avatar_url,
+			profile_url, 
+			full_name
+		) VALUES ($1, $2, $3, $4, $5, $6)`
 		insertedUserID, err := model.CreateRecord(q, user.ID, user.Login, user.Email, user.AvatarURL,
 			user.URL, user.Name)
 		if err != nil {
@@ -72,7 +89,14 @@ func Get(c *gin.Context) {
 	/***************
 	 * Create JWT
 	 ***************/
-	jwtToken, err := jwt.GenerateToken(userID, user.Login, user.AvatarURL)
+	sessionID, err := util.Rand(32)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	jwtToken, err := jwt.GenerateToken(sessionID, userID, user.Login, user.AvatarURL)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
@@ -82,17 +106,24 @@ func Get(c *gin.Context) {
 	/***************************
 	* Store token to Postgres
 	****************************/
-	//Generate a 32-byte random string for the refresh token.
-	bytes := make([]byte, 32)
-	_, err = rand.Read(bytes)
+	refreshToken, err := util.Rand(32)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	refreshToken := base64.URLEncoding.EncodeToString(bytes)
 
-	q := `INSERT INTO user_tokens (user_id, access_token, refresh_token, expires_at, refresh_expires_at, is_revoked) VALUES ($1, $2, $3, $4, $5, $6)`
+	q := `
+	INSERT INTO user_tokens (
+		user_id, 
+		access_token,
+		refresh_token, 
+		expires_at, 
+		refresh_expires_at,
+		is_revoked
+	) 
+	VALUES ($1, $2, $3, $4, $5, $6)
+	`
 	_, err = model.CreateRecord(q, userID, jwtToken, refreshToken, time.Now().Add(1*time.Hour), time.Now().Add(7*24*time.Hour), true)
 	if err != nil {
 		fmt.Println(err)
@@ -130,7 +161,7 @@ func Get(c *gin.Context) {
 
 	{
 		/* Store user info */
-		k := fmt.Sprintf("user_info:%s", userID)
+		k := fmt.Sprintf("session:%s", sessionID)
 		v := map[string]interface{}{
 			"github_id":   user.ID,
 			"profile_url": user.URL,
@@ -147,7 +178,7 @@ func Get(c *gin.Context) {
 		}
 	}
 
-	c.Redirect(http.StatusFound, "http://localhost:3000?token="+jwtToken)
+	c.Redirect(http.StatusFound, "http://localhost:3000/api/set-cookie?token="+jwtToken)
 }
 
 func getAccessToken(code string) (string, error) {
@@ -195,7 +226,6 @@ type User struct {
 	URL       string `json:"html_url"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`
-	// 必要に応じて他のフィールドを追加
 }
 
 func getUserInfo(token string) (User, error) {

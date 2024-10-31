@@ -10,6 +10,7 @@ import (
 )
 
 type Claims struct {
+	SessionID string `json:"session_id"`
 	UserID    string `json:"user_id"`
 	Username  string `json:"username"`
 	AvatarURL string `json:"avatar_url"`
@@ -17,13 +18,14 @@ type Claims struct {
 }
 
 // GenerateToken generate tokens used for auth
-func GenerateToken(userID, username, avatarURL string) (string, error) {
+func GenerateToken(sessionID, userID, username, avatarURL string) (string, error) {
 	nowTime := time.Now()
 	// fix
 	expireTime := nowTime.Add(9999 * time.Hour)
 
 	claims := Claims{
 		// fixme パラメータの選定
+		SessionID: sessionID,
 		UserID:    userID,
 		Username:  username,
 		AvatarURL: avatarURL,

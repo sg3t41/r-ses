@@ -1,3 +1,7 @@
+import { set, get } from './cookie/cookie'
 import { hash } from './crypt/sha256'
 
-export const sha256 = { hash }
+const sha256 = { hash }
+const cookie = { set, get }
+
+export { cookie, sha256 }
