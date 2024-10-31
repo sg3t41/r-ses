@@ -1,11 +1,14 @@
 package routers
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-contrib/cors" // CORSパッケージのインポート
 	"github.com/gin-gonic/gin"
 	"github.com/sg3t41/api/pkg/redis"
+	"github.com/sg3t41/api/pkg/util/jwt"
 	"github.com/sg3t41/api/router/api/auth/github/callback"
 	"github.com/sg3t41/api/router/api/auth/github/login"
 )
@@ -36,6 +39,33 @@ func InitRouter() *gin.Engine {
 
 	r.GET("/api/auth/github/login", login.Get)
 	r.GET("/api/auth/github/callback", callback.Get)
+
+	// GETメソッドでリポジトリを取得するエンドポイント
+	r.GET("/api/v1/repositories/public", func(c *gin.Context) {
+
+		// Authorizationヘッダーを取得
+		tokenWithPrefix := c.GetHeader("Authorization")
+		if tokenWithPrefix == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
+			return
+		}
+
+		token := strings.TrimPrefix(tokenWithPrefix, "Bearer ")
+
+		// JWTトークンの検証を行う
+		claims, err := jwt.ParseToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			return
+		}
+
+		fmt.Println("****:")
+		fmt.Println(claims)
+
+		repositories := []string{"Repo1", "Repo2", "Repo3"}
+
+		c.JSON(http.StatusOK, gin.H{"repositories": repositories})
+	})
 
 	//	apiv1 := r.Group("/api/v1")
 
