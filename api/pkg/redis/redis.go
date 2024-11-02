@@ -57,14 +57,18 @@ func HSet(c *gin.Context, key string, fields map[string]interface{}) error {
 	return nil
 }
 
-// HGetはハッシュからフィールドを取得します
-func HGet(c *gin.Context, key, field string) (string, error) {
+func HGet(c *gin.Context, key, field string) (string, bool, error) {
 	ctx := c.Request.Context()
 	val, err := rdb.HGet(ctx, key, field).Result()
-	if err != nil {
-		return "", err
+
+	switch {
+	case err == redis.Nil:
+		return "", false, nil
+	case err != nil:
+		return "", false, err
+	default:
+		return val, true, nil
 	}
-	return val, nil
 }
 
 // SAddはセットに要素を追加します

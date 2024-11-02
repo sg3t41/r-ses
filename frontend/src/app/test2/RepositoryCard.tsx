@@ -1,52 +1,28 @@
-// RepositoryCard.tsx
 import React from 'react'
+import { Repository } from './types'
 
-// リポジトリのフィールドに基づくインターフェースを定義
-interface Repository {
-  id: string
-  allow_forking: boolean
-  archive_url: string
-  archived: boolean
-  assignees_url: string
-  blobs_url: string
-  branches_url: string
-  clone_url: string
-  collaborators_url: string
-  comments_url: string
-  commits_url: string
-  compare_url: string
-  contents_url: string
-  contributors_url: string
-  created_at: string // ISO 8601形式の日時
-  updated_at: string // 最後の更新日時
-  default_branch: string // デフォルトブランチ
-  deployments_url: string
-  description: string | null // 説明がない場合もあるのでnullable
-  disabled: boolean
-  downloads_url: string
-  license: {
-    // ライセンス情報
-    key: string
-    name: string
-  } | null
-  private: boolean // プライベートかパブリックか
-  stargazers_count: number // スター数
-  forks_count: number // フォーク数
-  language: string | null // 主なプログラミング言語
-  name: string // リポジトリ名
-  fork: boolean // フォークされたかどうか
-  full_name: string
-}
-
-interface RepositoryCardProps {
+type Props = {
   repository: Repository
+  isChecked: boolean
+  onChange: (id: string) => void
 }
 
-const RepositoryCard: React.FC<RepositoryCardProps> = ({ repository }) => {
-  console.log(repository.id)
+const RepositoryCard: React.FC<Props> = ({
+  repository,
+  isChecked,
+  onChange,
+}) => {
   return (
     <div className='repository-card' style={styles.card}>
-      <h3 style={styles.title}>{repository.full_name}</h3>
+      <input
+        name='repo'
+        value={repository.id}
+        type='checkbox'
+        checked={isChecked}
+        onChange={() => onChange(repository.id)}
+        style={styles.checkbox}
+      />
+      <h3 style={styles.title}>{repository.id}</h3>
       <p style={styles.description}>
         {repository.description || 'No description provided'}
       </p>
@@ -110,6 +86,9 @@ const styles = {
   description: {
     fontStyle: 'italic',
     color: '#555',
+  },
+  checkbox: {
+    marginRight: '8px',
   },
 }
 

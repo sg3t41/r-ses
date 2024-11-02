@@ -66,15 +66,14 @@ func Get(c *gin.Context) {
 		userID = updatedUserID
 	} else {
 		// ユーザーが存在しない場合、新規作成
-		q := `
-		INSERT INTO users (
-			github_id, 
-			username, 
-			email, 
-			avatar_url,
-			profile_url, 
-			full_name
-		) VALUES ($1, $2, $3, $4, $5, $6)`
+		q := `INSERT INTO users (
+	    		github_id, 
+	    		username, 
+	    		email, 
+	    		avatar_url,
+	    		profile_url, 
+	    		full_name
+	    	) VALUES ($1, $2, $3, $4, $5, $6)`
 		insertedUserID, err := model.CreateRecord(q, user.ID, user.Login, user.Email, user.AvatarURL,
 			user.URL, user.Name)
 		if err != nil {
@@ -84,6 +83,21 @@ func Get(c *gin.Context) {
 		}
 
 		userID = insertedUserID
+	}
+
+	// Store Github Oauth Token to Postgres
+	{
+		q := `INSERT INTO oauth_tokens (
+			user_id,
+			provider,
+			access_token
+		) VALUES ($1, $2, $3)`
+		_, err := model.CreateRecord(q, userID, "github", githubAccessToken)
+		if err != nil {
+			fmt.Println(q)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	/***************

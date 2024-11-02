@@ -1,29 +1,18 @@
-import { jwtDecode, JwtPayload } from 'jwt-decode'
-import { cookies } from 'next/headers'
+import * as utils from '@/utils'
+import { JwtPayload } from 'jwt-decode'
 
-type CustomJwtPayload = {
-  username: string
-  email: string
+type JwtFields = {
+  session_id: string
   user_id: string
+  username: string
+  avatar_url: string
 } & JwtPayload
 
 const Header = async () => {
-  const cookieStore = await cookies()
-  const jwtToken = cookieStore.get('jwttoken')?.value
-  const currentUserInfo = jwtToken
-    ? jwtDecode<CustomJwtPayload>(jwtToken)
-    : undefined
+  const jwt = (await utils.cookie.get('token')) ?? ''
+  const { username } = utils.jwt.decode<JwtFields>(jwt)
 
-  return (
-    <header>
-      {currentUserInfo
-        ? `username: ${currentUserInfo?.username}
-					user_id: ${currentUserInfo?.user_id}
-					email: ${currentUserInfo?.email}
-			でログイン中`
-        : 'ログインしていません'}
-    </header>
-  )
+  return <header>{username}でログイン中</header>
 }
 
 export default Header

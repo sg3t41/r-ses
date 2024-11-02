@@ -3,14 +3,17 @@ package model
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
+	"github.com/jmoiron/sqlx"
 	"log"
+	"strings"
 	"time"
+
+	_ "github.com/lib/pq"
 
 	"github.com/sg3t41/api/config"
 )
 
-var DB *sql.DB
+var DB *sqlx.DB
 
 // Model : DBレコードに共通するフィールド
 type Model struct {
@@ -30,7 +33,7 @@ func Setup() {
 		config.DatabaseSetting.Password,
 		config.DatabaseSetting.Name)
 
-	DB, err = sql.Open(config.DatabaseSetting.Type, dsn)
+	DB, err = sqlx.Open(config.DatabaseSetting.Type, dsn)
 	if err != nil {
 		log.Fatalf("models.Setup err: %v", err)
 	}
@@ -103,6 +106,19 @@ func GetRecords(table string, condition string, args ...interface{}) ([]Model, e
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("GetRecords Rows Err: %v", err)
+	}
+
+	return records, nil
+}
+
+func GetRecords2[T any](table string, fields []string, condition string, args ...interface{}) ([]T, error) {
+	fieldsStr := strings.Join(fields, ", ")
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s", fieldsStr, table, condition)
+
+	var records []T
+	err := DB.Select(&records, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("GetRecords: %v", err)
 	}
 
 	return records, nil

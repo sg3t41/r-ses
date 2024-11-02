@@ -28,3 +28,14 @@ CREATE TABLE user_tokens (
     is_revoked BOOLEAN DEFAULT FALSE -- トークンが無効化されているかどうか
 );
 
+CREATE TABLE oauth_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+		provider VARCHAR(50) NOT NULL, -- プロバイダー名 (例: 'github') TODO: 中間テーブル
+    access_token VARCHAR(500) NOT NULL,
+    refresh_token VARCHAR(500),
+    expires_at TIMESTAMP,
+    refresh_expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
