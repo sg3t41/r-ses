@@ -22,13 +22,13 @@ func Get(c *gin.Context) {
 	}
 
 	// アクセストークンを取得
-	token, err := getAccessToken(code)
+	githubAccessToken, err := getAccessToken(code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error_accesstoken": err.Error()})
 		return
 	}
 
-	user, err := getUserInfo(token)
+	user, err := getUserInfo(githubAccessToken)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -160,15 +160,16 @@ func Get(c *gin.Context) {
 	}
 
 	{
-		/* Store user info */
+		/* Store session data */
 		k := fmt.Sprintf("session:%s", sessionID)
 		v := map[string]interface{}{
-			"github_id":   user.ID,
-			"profile_url": user.URL,
-			"github_name": user.Login,
-			"email":       user.Email,
-			"avatar_url":  user.AvatarURL,
-			"full_name":   user.Name,
+			"github_access_token": githubAccessToken,
+			"github_id":           user.ID,
+			"profile_url":         user.URL,
+			"github_name":         user.Login,
+			"email":               user.Email,
+			"avatar_url":          user.AvatarURL,
+			"full_name":           user.Name,
 		}
 
 		if err := redis.HSet(c, k, v); err != nil {
