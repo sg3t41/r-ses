@@ -6,6 +6,7 @@ import (
 	"github.com/sg3t41/api/middleware"
 	"github.com/sg3t41/api/router/api/auth/github/callback"
 	"github.com/sg3t41/api/router/api/auth/github/login"
+	"github.com/sg3t41/api/router/api/v1/github/repositories/portfolio"
 	repositories "github.com/sg3t41/api/router/api/v1/github/repositories/public"
 )
 
@@ -33,6 +34,7 @@ func InitRouter() *gin.Engine {
 	v1.Use(middleware.JWT())
 	{
 		v1.GET("/github/repositories/public", repositories.Get)
+		v1.POST("/github/repositories/portfolio", portfolio.Post)
 	}
 	return r
 }

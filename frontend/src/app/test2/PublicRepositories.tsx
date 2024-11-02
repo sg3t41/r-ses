@@ -1,10 +1,10 @@
 'use client'
 import * as hooks from '@/hooks'
+import * as utils from '@/utils'
 import RepositoryCard from './RepositoryCard'
 import React from 'react'
 
 type FormState = {
-  selectedRepoIds?: Array<string>
   error?: string
 }
 
@@ -14,9 +14,32 @@ export const PublicRepositories = () => {
   const [selectedRepoIds, setSelectedRepoIds] = React.useState<string[]>([])
 
   async function register(previousState: FormState, formData: FormData) {
-    console.log(formData.get('repo'))
+    const entriesArray = Array.from(formData.entries())
+    const selectedRepoIds: Array<string> = entriesArray
+      .map(([, value]) => value)
+      .filter(value => typeof value === 'string')
 
-    return { error: 'error!' } as FormState
+    const jwtToken = (await utils.cookie.get('token')) ?? ''
+    const response = await fetch(
+      `http://localhost:8080/api/v1/github/repositories/portfolio`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ portfolioRepoIds: selectedRepoIds }),
+      },
+    )
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Failed to post selected repository IDs')
+    }
+
+    const responseData = await response.json()
+    console.log('Response:', responseData.status)
+
+    return { error: '' } as FormState
   }
 
   const handleSelect = (id: string) => {

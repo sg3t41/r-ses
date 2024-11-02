@@ -15,7 +15,7 @@ const RepositoryCard: React.FC<Props> = ({
   return (
     <div className='repository-card' style={styles.card}>
       <input
-        name='repo'
+        name='repository'
         value={repository.id}
         type='checkbox'
         checked={isChecked}
