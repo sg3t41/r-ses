@@ -14,6 +14,17 @@ import (
 	"github.com/sg3t41/api/pkg/util/jwt"
 )
 
+type User struct {
+	ID        string `json:"sub"`
+	Name      string `json:"name"`
+	FirstName string `json:"given_name"`
+	LastName  string `json:"family_name"`
+	AvatarURL string `json:"picture"`
+	// Locale        string `json:"locale"`
+	Email         string `json:"email"`
+	EmailVelified bool   `json:"email_verified"`
+}
+
 func Get(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
@@ -225,17 +236,6 @@ func getAccessToken(code string) (string, error) {
 	return result.AccessToken, nil
 }
 
-type User struct {
-	ID        string `json:"sub"`
-	Name      string `json:"name"`
-	FirstName string `json:"given_name"`
-	LastName  string `json:"family_name"`
-	AvatarURL string `json:"picture"`
-	// Locale        string `json:"locale"`
-	Email         string `json:"email"`
-	EmailVelified bool   `json:"email_verified"`
-}
-
 func getUserInfo(token string) (User, error) {
 	req, err := http.NewRequest("GET", "https://api.linkedin.com/v2/userinfo", nil)
 	if err != nil {
@@ -256,17 +256,10 @@ func getUserInfo(token string) (User, error) {
 		return User{}, fmt.Errorf("failed to get user info: %s", resp.Status)
 	}
 
-	fmt.Println("BODYYYYYYYYYYY")
-	fmt.Println(resp.Body)
-
 	var user User
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		return User{}, err
 	}
-
-	fmt.Println("********************")
-	fmt.Println(user)
-	fmt.Println("*********************")
 
 	return user, nil
 }

@@ -1,7 +1,6 @@
 package callback
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,28 +8,46 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sg3t41/api/config"
 	"github.com/sg3t41/api/model"
+	"github.com/sg3t41/api/pkg/oauth"
 	"github.com/sg3t41/api/pkg/redis"
 	"github.com/sg3t41/api/pkg/util"
 	"github.com/sg3t41/api/pkg/util/jwt"
 )
 
+type User struct {
+	Login     string `json:"login"`
+	ID        int    `json:"id"`
+	AvatarURL string `json:"avatar_url"`
+	URL       string `json:"html_url"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+}
+
 func Get(c *gin.Context) {
-	code := c.Query("code")
-	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "code not found"})
+	code, err := oauth.GetCode(c)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// アクセストークンを取得
-	githubAccessToken, err := getAccessToken(code)
+	clientID := config.OAuthSetting.GithubClientID
+	clientSecret := config.OAuthSetting.GithubClientSecret
+	accessTokenURL := "https://github.com/login/oauth/access_token"
+	githubAccessToken, err := oauth.GetAccessToken(code, clientID, clientSecret, accessTokenURL)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error_accesstoken": err.Error()})
 		return
 	}
 
-	user, err := getUserInfo(githubAccessToken)
+	userInfoURL := "https://api.github.com/user"
+	acceptHeader := "application/vnd.github.v3+json"
+	user, err := oauth.GetUserInfo[User](githubAccessToken, userInfoURL, acceptHeader)
 	if err != nil {
 		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error_get_user_info": err.Error()})
+		return
 	}
 
 	/************************************
@@ -38,6 +55,7 @@ func Get(c *gin.Context) {
 	*************************************/
 	userExists, err := model.GetRecords("users", "github_id = $1", user.ID)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -194,79 +212,4 @@ func Get(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusFound, "http://localhost:3000/api/set-cookie?token="+jwtToken)
-}
-
-func getAccessToken(code string) (string, error) {
-	clientID := config.OAuthSetting.GithubClientID
-	clientSecret := config.OAuthSetting.GithubClientSecret
-	url := "https://github.com/login/oauth/access_token"
-	req, err := http.NewRequest("POST", url, nil)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("Accept", "application/json")
-
-	q := req.URL.Query()
-	q.Add("client_id", clientID)
-	q.Add("client_secret", clientSecret)
-	q.Add("code", code)
-	req.URL.RawQuery = q.Encode()
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to get access token: %s", resp.Status)
-	}
-
-	var result struct {
-		AccessToken string `json:"access_token"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
-	}
-
-	return result.AccessToken, nil
-}
-
-type User struct {
-	Login     string `json:"login"`
-	ID        int    `json:"id"`
-	AvatarURL string `json:"avatar_url"`
-	URL       string `json:"html_url"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-}
-
-func getUserInfo(token string) (User, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
-	if err != nil {
-		return User{}, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return User{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return User{}, fmt.Errorf("failed to get user info: %s", resp.Status)
-	}
-
-	var user User
-	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return User{}, err
-	}
-
-	return user, nil
 }

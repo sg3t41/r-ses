@@ -123,3 +123,18 @@ func GetRecords2[T any](table string, fields []string, condition string, args ..
 
 	return records, nil
 }
+
+func IsExist(table string, condition string, args ...interface{}) (bool, error) {
+	query := fmt.Sprintf("SELECT 1 FROM %s WHERE %s LIMIT 1", table, condition)
+
+	var exists int
+	err := DB.QueryRow(query, args...).Scan(&exists)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, fmt.Errorf("IsExist query error: %v", err)
+	}
+
+	return true, nil
+}
