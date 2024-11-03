@@ -44,6 +44,7 @@ CREATE TABLE user_provider (
 
 CREATE TABLE user_github (
     user_provider_id UUID REFERENCES user_provider(id) ON DELETE CASCADE,
+		github_id BIGINT NOT NULL UNIQUE,
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100),
     avatar_url VARCHAR(255),
@@ -58,6 +59,7 @@ CREATE TABLE user_github (
 
 CREATE TABLE user_linkedin (
     user_provider_id UUID REFERENCES user_provider(id) ON DELETE CASCADE,
+		linkedin_id VARCHAR(50) NOT NULL UNIQUE,
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     email VARCHAR(100),

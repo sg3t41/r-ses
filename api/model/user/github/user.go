@@ -10,12 +10,28 @@ type User struct {
 	model.Model
 }
 
-func IsExist(id string) (bool, error) {
-	isExist, err := model.IsExist("users", "id = %s", id)
+func IsExistByGithubId(githubId int) (bool, error) {
+	isExist, err := model.IsExist("user_github", "github_id = $1", githubId)
 	if err != nil {
 		return false, err
 	}
 	return isExist, nil
+}
+
+func UpdateGithubUser() {
+	q := `
+		UPDATE users 
+		SET
+			username=$1,
+			email=$2, 
+			avatar_url=$3, 
+			profile_url=$4, 
+			full_name=$5 
+		WHERE 
+			github_id=$6
+		`
+	updatedUserID, err := model.UpdateRecord(q, user.Login, user.Email, user.AvatarURL, user.URL, user.Name, user.ID)
+
 }
 
 // CreateUser : 新しいUserレコードを作成する関数

@@ -1,0 +1,18 @@
+/project-root
+│
+├── /model
+│   ├── /user_github
+│   │   └── user_github.go
+│   ├── /user_linkedin
+│   │   └── user_linkedin.go
+│   ├── /users
+│   │   └── user.go
+│   ├── /user_tokens
+│   │   └── user_tokens.go
+│   ├── /oauth_providers
+│   │   └── oauth_providers.go
+│   └── /oauth_tokens
+│       └── oauth_tokens.go
+│
+└── main.go
+
