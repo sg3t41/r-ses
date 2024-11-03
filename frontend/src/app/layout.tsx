@@ -15,9 +15,8 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: '署名オンライン',
-  description:
-    '署名オンラインはあなたの「変えたい」気持ちを形にする、ソーシャルプラットフォームです。現在世界中で２億人のユーザーがChange.orgを利用し、「チェンジ」を実現しています。',
+  title: 'rses',
+  description: 'description',
 }
 
 export default function RootLayout({

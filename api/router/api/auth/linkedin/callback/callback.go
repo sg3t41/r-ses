@@ -28,6 +28,9 @@ func Get(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("access-token:::")
+	fmt.Println(linkedInAccessToken)
+
 	user, err := getUserInfo(linkedInAccessToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error_userinfo": err.Error()})
@@ -37,7 +40,7 @@ func Get(c *gin.Context) {
 	/************************************
 	* Store LinkedIn user data to Postgres
 	*************************************/
-	userExists, err := model.GetRecords("users", "github_id = $1", user.ID)
+	userExists, err := model.GetRecords("users", "linkedin_id = $1", user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -57,7 +60,7 @@ func Get(c *gin.Context) {
 		WHERE 
 			linkedin_id=$6
 		`
-		updatedUserID, err := model.UpdateRecord(q, user.LocalName, user.Email, user.Picture, user.ProfileURL, user.FullName, user.ID)
+		updatedUserID, err := model.UpdateRecord(q, user.Name, user.Email, user.AvatarURL, "", user.Name, user.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -74,7 +77,7 @@ func Get(c *gin.Context) {
 	    		profile_url, 
 	    		full_name
 	    	) VALUES ($1, $2, $3, $4, $5, $6)`
-		insertedUserID, err := model.CreateRecord(q, user.ID, user.LocalName, user.Email, user.Picture, user.ProfileURL, user.FullName)
+		insertedUserID, err := model.CreateRecord(q, user.ID, user.Name, user.Email, user.AvatarURL, "", user.Name)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -106,7 +109,7 @@ func Get(c *gin.Context) {
 		return
 	}
 
-	jwtToken, err := jwt.GenerateToken(sessionID, userID, user.LocalName, user.Picture)
+	jwtToken, err := jwt.GenerateToken(sessionID, userID, user.Name, user.AvatarURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
@@ -166,11 +169,11 @@ func Get(c *gin.Context) {
 	v = map[string]interface{}{
 		"linkedin_access_token": linkedInAccessToken,
 		"linkedin_id":           user.ID,
-		"profile_url":           user.ProfileURL,
-		"linkedin_name":         user.LocalName,
-		"email":                 user.Email,
-		"avatar_url":            user.Picture,
-		"full_name":             user.FullName,
+		//	"profile_url":           user.ProfileURL,
+		//	"linkedin_name":         user.LocalName,
+		//	"email":                 user.Email,
+		//	"avatar_url":            user.Picture,
+		//	"full_name":             user.FullName,
 	}
 
 	if err := redis.HSet(c, k, v); err != nil {
@@ -223,16 +226,18 @@ func getAccessToken(code string) (string, error) {
 }
 
 type User struct {
-	LocalName  string `json:"localizedName"`
-	ID         string `json:"sub"`
-	Picture    string `json:"picture"`
-	ProfileURL string `json:"profileUrl"`
-	FullName   string `json:"fullName"`
-	Email      string `json:"email"`
+	ID        string `json:"sub"`
+	Name      string `json:"name"`
+	FirstName string `json:"given_name"`
+	LastName  string `json:"family_name"`
+	AvatarURL string `json:"picture"`
+	// Locale        string `json:"locale"`
+	Email         string `json:"email"`
+	EmailVelified bool   `json:"email_verified"`
 }
 
 func getUserInfo(token string) (User, error) {
-	req, err := http.NewRequest("GET", "https://api.linkedin.com/v2/me", nil)
+	req, err := http.NewRequest("GET", "https://api.linkedin.com/v2/userinfo", nil)
 	if err != nil {
 		return User{}, err
 	}
@@ -251,11 +256,17 @@ func getUserInfo(token string) (User, error) {
 		return User{}, fmt.Errorf("failed to get user info: %s", resp.Status)
 	}
 
+	fmt.Println("BODYYYYYYYYYYY")
+	fmt.Println(resp.Body)
+
 	var user User
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		return User{}, err
 	}
 
+	fmt.Println("********************")
+	fmt.Println(user)
+	fmt.Println("*********************")
+
 	return user, nil
 }
-
