@@ -4,8 +4,11 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sg3t41/api/middleware"
-	"github.com/sg3t41/api/router/api/auth/github/callback"
-	"github.com/sg3t41/api/router/api/auth/github/login"
+	github_callback "github.com/sg3t41/api/router/api/auth/github/callback"
+	github_login "github.com/sg3t41/api/router/api/auth/github/login"
+	linkedin_callback "github.com/sg3t41/api/router/api/auth/linkedin/callback"
+	linkedin_login "github.com/sg3t41/api/router/api/auth/linkedin/login"
+
 	"github.com/sg3t41/api/router/api/v1/github/repositories/portfolio"
 	repositories "github.com/sg3t41/api/router/api/v1/github/repositories/public"
 )
@@ -27,8 +30,11 @@ func InitRouter() *gin.Engine {
 	}
 	r.Use(cors.New(corsConfig))
 
-	r.GET("/api/auth/github/login", login.Get)
-	r.GET("/api/auth/github/callback", callback.Get)
+	r.GET("/api/auth/github/login", github_login.Get)
+	r.GET("/api/auth/github/callback", github_callback.Get)
+
+	r.GET("/api/auth/linkedin/login", linkedin_login.Get)
+	r.GET("/api/auth/linkedin/callback", linkedin_callback.Get)
 
 	v1 := r.Group("/api/v1")
 	v1.Use(middleware.JWT())

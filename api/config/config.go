@@ -62,9 +62,12 @@ type Redis struct {
 var RedisSetting = &Redis{}
 
 type OAuth struct {
-	GithubClientID     string
-	GithubClientSecret string
-	GithubRedirectURL  string
+	GithubClientID       string
+	GithubClientSecret   string
+	GithubRedirectURL    string
+	LinkedInClientID     string
+	LinkedInClientSecret string
+	LinkedInRedirectURL  string
 }
 
 var OAuthSetting = &OAuth{}

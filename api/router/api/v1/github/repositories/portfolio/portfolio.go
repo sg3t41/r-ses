@@ -20,5 +20,8 @@ func Post(c *gin.Context) {
 	}
 
 	fmt.Println("Received IDs:", req.PortfolioRepoIDs)
+
+	// db保存と項目を考える TODO
+
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
