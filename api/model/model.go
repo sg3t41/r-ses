@@ -3,13 +3,15 @@ package model
 import (
 	"database/sql"
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+
 	_ "github.com/lib/pq"
 
+	"github.com/google/uuid"
 	"github.com/sg3t41/api/config"
 )
 
@@ -17,10 +19,7 @@ var DB *sqlx.DB
 
 // Model : DBレコードに共通するフィールド
 type Model struct {
-	ID        string       `json:"id"`
-	CreatedAt time.Time    `json:"created_at"`
-	UpdatedAt time.Time    `json:"updated_at"`
-	DeletedAt sql.NullTime `json:"deleted_at"`
+	ID uuid.UUID `json:"id"`
 }
 
 // Setup : データベースのセットアップ関数
@@ -52,6 +51,30 @@ func Setup() {
 func CloseDB() {
 	if DB != nil {
 		DB.Close()
+	}
+}
+
+func Insert[T any](db sqlx.Ext, baseQuery string, record T) (uuid.UUID, error) {
+	query := baseQuery + ` RETURNING id`
+	var id uuid.UUID
+	switch conn := db.(type) {
+	case *sqlx.DB:
+		err := conn.QueryRowx(query, record).Scan(&id)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return id, nil
+
+	// トランザクション使用時
+	case *sqlx.Tx:
+		err := conn.QueryRowx(query, record).Scan(&id)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return id, nil
+
+	default:
+		return uuid.Nil, fmt.Errorf("unsupported type: %T", db)
 	}
 }
 
@@ -87,7 +110,7 @@ func SoftDeleteRecord(query string, args ...interface{}) (int64, error) {
 }
 
 func GetRecords(table string, condition string, args ...interface{}) ([]Model, error) {
-	query := fmt.Sprintf("SELECT id, created_at, updated_at, deleted_at FROM %s WHERE %s", table, condition)
+	query := fmt.Sprintf("SELECT id FROM %s WHERE %s", table, condition)
 
 	rows, err := DB.Query(query, args...)
 	if err != nil {
@@ -98,7 +121,7 @@ func GetRecords(table string, condition string, args ...interface{}) ([]Model, e
 	var records []Model
 	for rows.Next() {
 		var record Model
-		if err := rows.Scan(&record.ID, &record.CreatedAt, &record.UpdatedAt, &record.DeletedAt); err != nil {
+		if err := rows.Scan(&record.ID); err != nil {
 			return nil, fmt.Errorf("GetRecords Scan: %v", err)
 		}
 		records = append(records, record)
