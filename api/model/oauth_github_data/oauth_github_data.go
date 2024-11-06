@@ -21,38 +21,55 @@ type OauthGithubData struct {
 	AccountCreatedAt time.Time `db:"account_created_at"` // アカウント作成日時
 }
 
-func Create(db sqlx.Ext, data OauthGithubData) (*uuid.UUID, error) {
+func Create(db sqlx.Ext, data OauthGithubData) error {
 	// INSERTクエリを作成
 	query := `
-		INSERT INTO oauth_github_data (username, email, avatar_url, profile_url, full_name, bio, location, company, account_created_at)
-		VALUES (:username, :email, :avatar_url, :profile_url, :full_name, :bio, :location, :company, :account_created_at)
-		RETURNING id
-	`
-
-	var id uuid.UUID
+        INSERT INTO oauth_github_data (username, email, avatar_url, profile_url, full_name, bio, location, company, account_created_at)
+        VALUES (:username, :email, :avatar_url, :profile_url, :full_name, :bio, :location, :company, :account_created_at)
+    `
 
 	// dbの型に応じて処理を分ける
 	switch conn := db.(type) {
 	case *sqlx.DB:
 		// DB接続の場合
-		err := conn.Get(&id, query, data)
+		result, err := conn.NamedExec(query, data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create OauthGithubData: %w", err)
+			return fmt.Errorf("failed to create OauthGithubData: %w", err)
+		}
+
+		// 影響を受けた行数を確認
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to retrieve affected rows: %w", err)
+		}
+
+		if rowsAffected == 0 {
+			return fmt.Errorf("no rows were affected")
 		}
 
 	case *sqlx.Tx:
 		// トランザクションの場合
-		err := conn.Get(&id, query, data)
+		result, err := conn.NamedExec(query, data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create OauthGithubData: %w", err)
+			return fmt.Errorf("failed to create OauthGithubData: %w", err)
+		}
+
+		// 影響を受けた行数を確認
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to retrieve affected rows: %w", err)
+		}
+
+		if rowsAffected == 0 {
+			return fmt.Errorf("no rows were affected")
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported db type: %T", db)
+		return fmt.Errorf("unsupported db type: %T", db)
 	}
 
-	// 挿入されたIDを返す
-	return &id, nil
+	// 成功
+	return nil
 }
 
 func Update(db sqlx.Ext, data OauthGithubData) (*int64, error) {
@@ -98,4 +115,3 @@ func Update(db sqlx.Ext, data OauthGithubData) (*int64, error) {
 	// 更新されたIDを返す
 	return &id, nil
 }
-

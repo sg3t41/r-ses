@@ -37,9 +37,10 @@ CREATE TABLE oauth_tokens (
 );
 
 CREATE TABLE user_provider (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     provider_id UUID REFERENCES oauth_providers(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, provider_id)
+    UNIQUE (user_id, provider_id)  -- user_id と provider_id の組み合わせを一意にする
 );
 
 -- GitHubのOAuthデータ
