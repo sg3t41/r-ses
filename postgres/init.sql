@@ -37,14 +37,14 @@ CREATE TABLE oauth_tokens (
 );
 
 CREATE TABLE user_provider (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    provider_id UUID REFERENCES oauth_providers(id) ON DELETE CASCADE
+    provider_id UUID REFERENCES oauth_providers(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, provider_id)
 );
 
-CREATE TABLE user_github (
-    user_provider_id UUID REFERENCES user_provider(id) ON DELETE CASCADE,
-		github_id BIGINT NOT NULL UNIQUE,
+-- GitHubのOAuthデータ
+CREATE TABLE oauth_github_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100),
     avatar_url VARCHAR(255),
@@ -53,19 +53,35 @@ CREATE TABLE user_github (
     bio TEXT,
     location VARCHAR(100),
     company VARCHAR(100),
-    account_created_at TIMESTAMP,
+    account_created_at TIMESTAMP
+);
+
+CREATE TABLE user_github (
+    user_provider_id UUID REFERENCES user_provider(id) ON DELETE CASCADE,
+    github_id BIGINT NOT NULL UNIQUE,
+    user_github_data UUID REFERENCES oauth_github_data(id) ON DELETE CASCADE,
     PRIMARY KEY (user_provider_id)
 );
 
-CREATE TABLE user_linkedin (
-    user_provider_id UUID REFERENCES user_provider(id) ON DELETE CASCADE,
-		linkedin_id VARCHAR(50) NOT NULL UNIQUE,
+-- LinkedInのOAuthデータ
+CREATE TABLE oauth_linkedin_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     email VARCHAR(100),
     location VARCHAR(100),
     industry VARCHAR(100),
     profile_url VARCHAR(255),
+    headline VARCHAR(255),
+    summary TEXT,
+    public_profile_url VARCHAR(255),
+    account_created_at TIMESTAMP
+);
+
+CREATE TABLE user_linkedin (
+    user_provider_id UUID REFERENCES user_provider(id) ON DELETE CASCADE,
+    linkedin_id VARCHAR(50) NOT NULL UNIQUE,
+    user_linkedin_data UUID REFERENCES oauth_linkedin_data(id) ON DELETE CASCADE,
     PRIMARY KEY (user_provider_id)
 );
 
@@ -74,3 +90,4 @@ INSERT INTO oauth_providers (name) VALUES
     ('GITHUB'),
     ('LINKEDIN')
 ON CONFLICT (name) DO NOTHING;
+

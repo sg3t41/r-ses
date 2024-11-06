@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	config.Setup()
+	config.Setup("config/app.ini")
 	util.Setup()
 	model.Setup()
 	redis.SetUp()

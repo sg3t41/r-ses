@@ -74,9 +74,9 @@ var OAuthSetting = &OAuth{}
 
 var cfg *ini.File
 
-func Setup() {
+func Setup(configFilePath string) {
 	var err error
-	cfg, err = ini.Load("config/app.ini")
+	cfg, err = ini.Load(configFilePath)
 	if err != nil {
 		log.Fatalf("setting.Setup, fail to parse 'config/app.ini': %v", err)
 	}

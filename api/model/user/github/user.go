@@ -18,22 +18,6 @@ func IsExistByGithubId(githubId int) (bool, error) {
 	return isExist, nil
 }
 
-func UpdateGithubUser() {
-	q := `
-		UPDATE users 
-		SET
-			username=$1,
-			email=$2, 
-			avatar_url=$3, 
-			profile_url=$4, 
-			full_name=$5 
-		WHERE 
-			github_id=$6
-		`
-	updatedUserID, err := model.UpdateRecord(q, user.Login, user.Email, user.AvatarURL, user.URL, user.Name, user.ID)
-
-}
-
 // CreateUser : 新しいUserレコードを作成する関数
 func Create(username, email, passwordHash string) (string, error) {
 	query := "INSERT INTO users (username, email, password_hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)"

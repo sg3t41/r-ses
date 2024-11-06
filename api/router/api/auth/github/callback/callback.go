@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sg3t41/api/config"
 	"github.com/sg3t41/api/model"
-	github_model "github.com/sg3t41/api/model/user/github"
+	"github.com/sg3t41/api/model/user_github"
 	"github.com/sg3t41/api/pkg/oauth"
 	"github.com/sg3t41/api/pkg/redis"
 	"github.com/sg3t41/api/pkg/util"
@@ -17,7 +17,7 @@ import (
 
 type GithubUserInfo struct {
 	Login     string `json:"login"`
-	ID        int    `json:"id"`
+	ID        int64  `json:"id"`
 	AvatarURL string `json:"avatar_url"`
 	URL       string `json:"html_url"`
 	Name      string `json:"name"`
@@ -54,7 +54,7 @@ func Get(c *gin.Context) {
 	/************************************
 	* Store github user data to Postgres
 	*************************************/
-	isExists, err := github_model.IsExistByGithubId(user.ID)
+	exists, err := user_github.ExistsByGithubId(model.DB, user.ID)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -62,7 +62,7 @@ func Get(c *gin.Context) {
 	}
 
 	var userID string
-	if isExists {
+	if exists {
 		// ユーザーが存在する場合、更新する
 		q := `
 		UPDATE users 

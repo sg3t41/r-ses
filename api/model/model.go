@@ -54,28 +54,47 @@ func CloseDB() {
 	}
 }
 
-func Insert[T any](db sqlx.Ext, baseQuery string, record T) (uuid.UUID, error) {
+func Insert[T any](db sqlx.Ext, baseQuery string, record *T) (uuid.UUID, error) {
 	query := baseQuery + ` RETURNING id`
 	var id uuid.UUID
 	switch conn := db.(type) {
+	// トランザクション未使用
 	case *sqlx.DB:
-		err := conn.QueryRowx(query, record).Scan(&id)
-		if err != nil {
-			return uuid.Nil, err
+		if record != nil {
+			err := conn.QueryRowx(query, record).Scan(&id)
+			if err != nil {
+				return uuid.Nil, err
+			}
+		} else {
+			err := conn.QueryRowx(query).Scan(&id)
+			if err != nil {
+				return uuid.Nil, err
+			}
 		}
 		return id, nil
 
-	// トランザクション使用時
+	// トランザクション使用
 	case *sqlx.Tx:
-		err := conn.QueryRowx(query, record).Scan(&id)
-		if err != nil {
-			return uuid.Nil, err
+		if record != nil {
+			err := conn.QueryRowx(query, record).Scan(&id)
+			if err != nil {
+				return uuid.Nil, err
+			}
+		} else {
+			err := conn.QueryRowx(query).Scan(&id)
+			if err != nil {
+				return uuid.Nil, err
+			}
 		}
 		return id, nil
 
 	default:
 		return uuid.Nil, fmt.Errorf("unsupported type: %T", db)
 	}
+}
+
+func Select[R any](db sqlx.Ext, query string, record *R) (*R, error) {
+	return nil, nil
 }
 
 // CreateRecord : 新しいレコードを作成する関数
