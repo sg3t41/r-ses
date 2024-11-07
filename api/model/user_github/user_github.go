@@ -3,24 +3,15 @@ package user_github
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
 type UserGithub struct {
-	UserProviderID   uuid.UUID `db:"user_provider_id"`   // ユーザープロバイダーID
-	GithubID         int64     `db:"github_id"`          // GitHub ID
-	Username         string    `db:"username"`           // ユーザー名
-	Email            string    `db:"email"`              // メールアドレス
-	AvatarURL        string    `db:"avatar_url"`         // アバターURL
-	ProfileURL       string    `db:"profile_url"`        // プロフィールURL
-	FullName         string    `db:"full_name"`          // フルネーム
-	Bio              string    `db:"bio"`                // 自己紹介
-	Location         string    `db:"location"`           // 所在地
-	Company          string    `db:"company"`            // 会社名
-	AccountCreatedAt time.Time `db:"account_created_at"` // アカウント作成日時
+	UserProviderID        uuid.UUID `db:"user_provider_id"`
+	UserOauthGithubDataID uuid.UUID `db:"user_oauth_github_data_id"`
+	GithubID              int64     `db:"github_id"`
 }
 
 func ExistsByGithubId(db sqlx.Ext, githubId int64) (bool, error) {

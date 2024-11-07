@@ -8,7 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sg3t41/api/config"
 	"github.com/sg3t41/api/model"
+	"github.com/sg3t41/api/model/oauth_access_tokens"
+	model_oauth_providers "github.com/sg3t41/api/model/oauth_providers"
 	"github.com/sg3t41/api/model/user_github"
+	model_user_oauth_providers "github.com/sg3t41/api/model/user_oauth_providers"
+	model_users "github.com/sg3t41/api/model/users"
 	"github.com/sg3t41/api/pkg/oauth"
 	"github.com/sg3t41/api/pkg/redis"
 	"github.com/sg3t41/api/pkg/util"
@@ -59,6 +63,22 @@ func Get(c *gin.Context) {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// ユーザーが存在しない場合、DBにユーザー登録する
+	if !exists {
+		tx, err := model.DB.Begin()
+		createdUserID, err := model_users.Create(tx)
+		providerID, err := model_oauth_providers.GetProviderID(tx, "GITHUB")
+		createdUserOauthProvidersID, err := model_user_oauth_providers.Create(tx, createdUserID, providerID)
+		_, err = oauth_access_tokens.Create(tx, createdUserOauthProvidersID, githubAccessToken, nil)
+		if err != nil {
+			defer tx.Rollback()
+			fmt.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		tx.Commit()
 	}
 
 	var userID string

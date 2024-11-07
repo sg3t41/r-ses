@@ -33,10 +33,8 @@ func getTestData() OauthGithubData {
 func TestCreate(t *testing.T) {
 	t.Logf("Create OauthGithubDataのテストを実施します。")
 
-	// テスト用データ
 	data := getTestData()
 
-	// データベース接続
 	err := Create(model.DB, data)
 	if err != nil {
 		t.Errorf("Create failed: %v", err)

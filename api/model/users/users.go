@@ -12,7 +12,7 @@ type Users struct {
 	model.Model
 }
 
-func CreateUser(db sqlx.Ext) (uuid.UUID, error) {
+func Create(db any) (uuid.UUID, error) {
 	q := `INSERT INTO users DEFAULT VALUES RETURNING id`
 
 	var id uuid.UUID
